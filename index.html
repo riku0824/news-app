@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>理系採用ニュース</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header class="header">
+    <h1 class="header__title">理系採用ニュース</h1>
+    <div class="header__tabs">
+      <button class="header__tab header__tab--active" data-view="news">ニュース</button>
+      <button class="header__tab" data-view="favorites">★ お気に入り</button>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="main">
+
+    <!-- ニュースビュー -->
+    <div id="view-news" class="view view--active">
+
+      <!-- カテゴリタブ（横スクロール） -->
+      <nav class="category-nav">
+        <div class="category-nav__inner">
+          <button class="category-btn category-btn--active" data-category="all">全て</button>
+          <!-- config.jsのCATEGORIESから動的に生成 -->
+        </div>
+      </nav>
+
+      <!-- 期間フィルター -->
+      <div class="period-filter">
+        <button class="period-btn period-btn--active" data-period="all">全期間</button>
+        <button class="period-btn" data-period="week">今週</button>
+        <button class="period-btn" data-period="today">今日</button>
+      </div>
+
+      <!-- 記事一覧 -->
+      <div id="article-list" class="article-list">
+        <div class="loading">読み込み中...</div>
+      </div>
+    </div>
+
+    <!-- お気に入りビュー -->
+    <div id="view-favorites" class="view">
+      <div id="favorites-list" class="article-list">
+        <p class="empty-message">お気に入りはまだありません</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 記事モーダル -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal__overlay"></div>
+    <div class="modal__content">
+      <button class="modal__close" aria-label="閉じる">×</button>
+      <div class="modal__source-date">
+        <span id="modal-source"></span>
+        <span id="modal-date"></span>
+      </div>
+      <h2 id="modal-title" class="modal__title"></h2>
+      <p id="modal-description" class="modal__description"></p>
+      <a id="modal-link" class="modal__link" href="#" target="_blank" rel="noopener noreferrer">
+        元記事を開く →
+      </a>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
