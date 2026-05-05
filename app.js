@@ -1,6 +1,57 @@
 // 全記事を保持する配列
 let allArticles = [];
 
+// 現在の絞り込み状態
+let currentCategory = 'all';
+let currentPeriod = 'all';
+
+// 記事にカテゴリを付与する
+function assignCategory(article) {
+  const text = article.title + ' ' + article.description;
+  for (const cat of CONFIG.CATEGORIES) {
+    if (cat.keywords.length === 0) continue; // 採用全般は最後
+    if (cat.keywords.some(kw => text.includes(kw))) {
+      return cat.id;
+    }
+  }
+  return 'general';
+}
+
+// カテゴリタブをDOMに生成する
+function buildCategoryTabs() {
+  const inner = document.querySelector('.category-nav__inner');
+  CONFIG.CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'category-btn';
+    btn.dataset.category = cat.id;
+    btn.textContent = cat.label;
+    inner.appendChild(btn);
+  });
+}
+
+// 現在の絞り込み条件で表示を更新する
+function applyFilters() {
+  let filtered = allArticles;
+  if (currentCategory !== 'all') {
+    filtered = filtered.filter(a => a.category === currentCategory);
+  }
+  renderArticles(filtered);
+}
+
+// カテゴリタブのクリックを処理する
+function bindCategoryEvents() {
+  document.querySelector('.category-nav__inner').addEventListener('click', e => {
+    const btn = e.target.closest('.category-btn');
+    if (!btn) return;
+
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
+    btn.classList.add('category-btn--active');
+
+    currentCategory = btn.dataset.category;
+    applyFilters();
+  });
+}
+
 // RSS1件をfetchしてarticle配列を返す
 async function fetchFeed(source) {
   const url = CONFIG.RSS2JSON_API + encodeURIComponent(source.url);
@@ -9,13 +60,17 @@ async function fetchFeed(source) {
 
   if (data.status !== 'ok') return [];
 
-  return data.items.map(item => ({
-    title: item.title || '',
-    description: stripHtml(item.description || item.content || ''),
-    link: item.link || '',
-    pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
-    source: source.name,
-  }));
+  return data.items.map(item => {
+    const article = {
+      title: item.title || '',
+      description: stripHtml(item.description || item.content || ''),
+      link: item.link || '',
+      pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
+      source: source.name,
+    };
+    article.category = assignCategory(article);
+    return article;
+  });
 }
 
 // HTMLタグを除去してテキストだけ取り出す
@@ -110,7 +165,9 @@ function bindEvents() {
 
 // 起動
 async function init() {
+  buildCategoryTabs();
   bindEvents();
+  bindCategoryEvents();
 
   const list = document.getElementById('article-list');
   list.innerHTML = '<div class="loading">ニュースを読み込み中...</div>';
@@ -122,9 +179,9 @@ async function init() {
   allArticles = results
     .filter(r => r.status === 'fulfilled')
     .flatMap(r => r.value)
-    .sort((a, b) => b.pubDate - a.pubDate); // 新しい順
+    .sort((a, b) => b.pubDate - a.pubDate);
 
-  renderArticles(allArticles);
+  applyFilters();
 }
 
 document.addEventListener('DOMContentLoaded', init);
