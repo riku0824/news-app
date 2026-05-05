@@ -5,6 +5,81 @@ let allArticles = [];
 let currentCategory = 'all';
 let currentPeriod = 'all';
 
+// --- お気に入り（localStorage） ---
+
+const FAVORITES_KEY = 'news_favorites';
+
+function loadFavorites() {
+  return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+}
+
+function saveFavorites(favorites) {
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+}
+
+function isFavorited(article) {
+  return loadFavorites().some(f => f.link === article.link);
+}
+
+function toggleFavorite(article) {
+  const favorites = loadFavorites();
+  const idx = favorites.findIndex(f => f.link === article.link);
+  if (idx === -1) {
+    // pubDateはDate型なので文字列に変換して保存
+    favorites.push({ ...article, pubDate: article.pubDate.toISOString() });
+  } else {
+    favorites.splice(idx, 1);
+  }
+  saveFavorites(favorites);
+}
+
+function renderFavorites() {
+  const list = document.getElementById('favorites-list');
+  const favorites = loadFavorites().map(f => ({
+    ...f,
+    pubDate: new Date(f.pubDate),
+  }));
+  if (favorites.length === 0) {
+    list.innerHTML = '<p class="empty-message">お気に入りはまだありません</p>';
+    return;
+  }
+  list.innerHTML = favorites.map((a, i) => createFavoriteCardHtml(a, i)).join('');
+}
+
+function createFavoriteCardHtml(article, index) {
+  return `
+    <div class="article-card" data-fav-index="${index}">
+      <div class="article-card__header">
+        <h2 class="article-card__title">${escapeHtml(article.title)}</h2>
+        <button class="article-card__star article-card__star--saved" data-fav-index="${index}" aria-label="お気に入り解除">★</button>
+      </div>
+      <p class="article-card__description">${escapeHtml(article.description)}</p>
+      <div class="article-card__meta">
+        <span>${escapeHtml(article.source)}</span>
+        <span>${formatDate(article.pubDate)}</span>
+      </div>
+    </div>
+  `;
+}
+
+
+// ヘッダータブの切り替え
+function bindViewTabs() {
+  document.querySelector('.header__tabs').addEventListener('click', e => {
+    const tab = e.target.closest('.header__tab');
+    if (!tab) return;
+
+    document.querySelectorAll('.header__tab').forEach(t => t.classList.remove('header__tab--active'));
+    tab.classList.add('header__tab--active');
+
+    const view = tab.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('view--active'));
+    document.getElementById(`view-${view}`).classList.add('view--active');
+
+    if (view === 'favorites') renderFavorites();
+  });
+}
+
 // 記事にカテゴリを付与する
 function assignCategory(article) {
   const text = article.title + ' ' + article.description;
@@ -122,11 +197,12 @@ function formatDate(date) {
 
 // 記事カードのHTML文字列を生成
 function createCardHtml(article, index) {
+  const saved = isFavorited(article);
   return `
     <div class="article-card" data-index="${index}">
       <div class="article-card__header">
         <h2 class="article-card__title">${escapeHtml(article.title)}</h2>
-        <button class="article-card__star" data-index="${index}" aria-label="お気に入り">☆</button>
+        <button class="article-card__star ${saved ? 'article-card__star--saved' : ''}" data-index="${index}" aria-label="お気に入り">${saved ? '★' : '☆'}</button>
       </div>
       <p class="article-card__description">${escapeHtml(article.description)}</p>
       <div class="article-card__meta">
@@ -178,16 +254,34 @@ function closeModal() {
 
 // イベント登録
 function bindEvents() {
-  // 記事カードクリック
+  // ニュース一覧：☆クリック
   document.getElementById('article-list').addEventListener('click', e => {
     const star = e.target.closest('.article-card__star');
-    if (star) return; // ☆クリックはモーダルを開かない
-
+    if (star) {
+      const index = Number(star.dataset.index);
+      toggleFavorite(allArticles[index]);
+      const saved = isFavorited(allArticles[index]);
+      star.textContent = saved ? '★' : '☆';
+      star.classList.toggle('article-card__star--saved', saved);
+      return;
+    }
     const card = e.target.closest('.article-card');
     if (!card) return;
+    openModal(allArticles[Number(card.dataset.index)]);
+  });
 
-    const index = Number(card.dataset.index);
-    openModal(allArticles[index]);
+  // お気に入りビュー：★クリックで解除、カードクリックでモーダル
+  document.getElementById('favorites-list').addEventListener('click', e => {
+    const favorites = loadFavorites().map(f => ({ ...f, pubDate: new Date(f.pubDate) }));
+    const star = e.target.closest('.article-card__star');
+    if (star) {
+      toggleFavorite(favorites[Number(star.dataset.favIndex)]);
+      renderFavorites();
+      return;
+    }
+    const card = e.target.closest('.article-card');
+    if (!card) return;
+    openModal(favorites[Number(card.dataset.favIndex)]);
   });
 
   // モーダルを閉じる
@@ -198,6 +292,7 @@ function bindEvents() {
 // 起動
 async function init() {
   buildCategoryTabs();
+  bindViewTabs();
   bindEvents();
   bindCategoryEvents();
   bindPeriodEvents();
