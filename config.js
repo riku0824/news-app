@@ -55,10 +55,5 @@ const CONFIG = {
       label: '建設・インフラ',
       keywords: ['建設', 'インフラ', '土木', '建築', '不動産'],
     },
-    {
-      id: 'general',
-      label: '採用全般',
-      keywords: [], // 上記どれにも当てはまらない記事
-    },
   ],
 };
