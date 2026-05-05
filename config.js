@@ -2,27 +2,23 @@ const CONFIG = {
   // rss2json.com 経由でCORS回避してRSSをJSONに変換
   RSS2JSON_API: 'https://api.rss2json.com/v1/api.json?rss_url=',
 
-  // RSSソース一覧
+  // RSSソース一覧（実在確認済み）
   RSS_SOURCES: [
-    {
-      name: 'HRpro',
-      url: 'https://www.hrpro.co.jp/rss.xml',
-    },
     {
       name: 'HR NOTE',
       url: 'https://hrnote.jp/feed/',
     },
     {
-      name: 'ワークス研究所',
-      url: 'https://www.works-i.com/research/rss.xml',
+      name: 'リクナビNEXTジャーナル',
+      url: 'https://next.rikunabi.com/journal/feed/',
     },
     {
-      name: 'マイナビニュース',
-      url: 'https://news.mynavi.jp/rss/career',
+      name: 'doda人事ジャーナル',
+      url: 'https://www.dodadsj.com/feed/',
     },
     {
-      name: 'HR AGE',
-      url: 'https://hr-age.com/feed/',
+      name: 'ミツカリ',
+      url: 'https://mitsucari.com/blog/feed/',
     },
   ],
 
