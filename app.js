@@ -43,15 +43,15 @@ function renderFavorites() {
     list.innerHTML = '<p class="empty-message">お気に入りはまだありません</p>';
     return;
   }
-  list.innerHTML = favorites.map((a, i) => createFavoriteCardHtml(a, i)).join('');
+  list.innerHTML = favorites.map(a => createFavoriteCardHtml(a)).join('');
 }
 
-function createFavoriteCardHtml(article, index) {
+function createFavoriteCardHtml(article) {
   return `
-    <div class="article-card" data-fav-index="${index}">
+    <div class="article-card" data-link="${escapeHtml(article.link)}">
       <div class="article-card__header">
         <h2 class="article-card__title">${escapeHtml(article.title)}</h2>
-        <button class="article-card__star article-card__star--saved" data-fav-index="${index}" aria-label="お気に入り解除">★</button>
+        <button class="article-card__star article-card__star--saved" data-link="${escapeHtml(article.link)}" aria-label="お気に入り解除">★</button>
       </div>
       <p class="article-card__description">${escapeHtml(article.description)}</p>
       <div class="article-card__meta">
@@ -195,14 +195,14 @@ function formatDate(date) {
   return `${y}/${m}/${d}`;
 }
 
-// 記事カードのHTML文字列を生成
-function createCardHtml(article, index) {
+// 記事カードのHTML文字列を生成（link URLをキーにして記事を特定する）
+function createCardHtml(article) {
   const saved = isFavorited(article);
   return `
-    <div class="article-card" data-index="${index}">
+    <div class="article-card" data-link="${escapeHtml(article.link)}">
       <div class="article-card__header">
         <h2 class="article-card__title">${escapeHtml(article.title)}</h2>
-        <button class="article-card__star ${saved ? 'article-card__star--saved' : ''}" data-index="${index}" aria-label="お気に入り">${saved ? '★' : '☆'}</button>
+        <button class="article-card__star ${saved ? 'article-card__star--saved' : ''}" data-link="${escapeHtml(article.link)}" aria-label="お気に入り">${saved ? '★' : '☆'}</button>
       </div>
       <p class="article-card__description">${escapeHtml(article.description)}</p>
       <div class="article-card__meta">
@@ -229,7 +229,7 @@ function renderArticles(articles) {
     list.innerHTML = '<p class="empty-message">記事が見つかりませんでした</p>';
     return;
   }
-  list.innerHTML = articles.map((a, i) => createCardHtml(a, i)).join('');
+  list.innerHTML = articles.map(a => createCardHtml(a)).join('');
 }
 
 // カードクリックでモーダルを開く
@@ -254,20 +254,22 @@ function closeModal() {
 
 // イベント登録
 function bindEvents() {
-  // ニュース一覧：☆クリック
+  // ニュース一覧：☆クリック・カードクリック
   document.getElementById('article-list').addEventListener('click', e => {
     const star = e.target.closest('.article-card__star');
     if (star) {
-      const index = Number(star.dataset.index);
-      toggleFavorite(allArticles[index]);
-      const saved = isFavorited(allArticles[index]);
+      const article = allArticles.find(a => a.link === star.dataset.link);
+      if (!article) return;
+      toggleFavorite(article);
+      const saved = isFavorited(article);
       star.textContent = saved ? '★' : '☆';
       star.classList.toggle('article-card__star--saved', saved);
       return;
     }
     const card = e.target.closest('.article-card');
     if (!card) return;
-    openModal(allArticles[Number(card.dataset.index)]);
+    const article = allArticles.find(a => a.link === card.dataset.link);
+    if (article) openModal(article);
   });
 
   // お気に入りビュー：★クリックで解除、カードクリックでモーダル
@@ -275,18 +277,23 @@ function bindEvents() {
     const favorites = loadFavorites().map(f => ({ ...f, pubDate: new Date(f.pubDate) }));
     const star = e.target.closest('.article-card__star');
     if (star) {
-      toggleFavorite(favorites[Number(star.dataset.favIndex)]);
+      const article = favorites.find(f => f.link === star.dataset.link);
+      if (article) toggleFavorite(article);
       renderFavorites();
       return;
     }
     const card = e.target.closest('.article-card');
     if (!card) return;
-    openModal(favorites[Number(card.dataset.favIndex)]);
+    const article = favorites.find(f => f.link === card.dataset.link);
+    if (article) openModal(article);
   });
 
-  // モーダルを閉じる
+  // モーダルを閉じる（×ボタン・背景クリック・ESCキー）
   document.querySelector('.modal__close').addEventListener('click', closeModal);
   document.querySelector('.modal__overlay').addEventListener('click', closeModal);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
 }
 
 // 起動
