@@ -29,13 +29,45 @@ function buildCategoryTabs() {
   });
 }
 
+// 期間フィルターの判定
+function isInPeriod(article) {
+  if (currentPeriod === 'all') return true;
+  const now = new Date();
+  const pub = article.pubDate;
+  if (currentPeriod === 'today') {
+    return pub.getFullYear() === now.getFullYear()
+      && pub.getMonth() === now.getMonth()
+      && pub.getDate() === now.getDate();
+  }
+  if (currentPeriod === 'week') {
+    const msPerDay = 1000 * 60 * 60 * 24;
+    return (now - pub) <= msPerDay * 7;
+  }
+  return true;
+}
+
 // 現在の絞り込み条件で表示を更新する
 function applyFilters() {
   let filtered = allArticles;
   if (currentCategory !== 'all') {
     filtered = filtered.filter(a => a.category === currentCategory);
   }
+  filtered = filtered.filter(isInPeriod);
   renderArticles(filtered);
+}
+
+// 期間フィルターのクリックを処理する
+function bindPeriodEvents() {
+  document.querySelector('.period-filter').addEventListener('click', e => {
+    const btn = e.target.closest('.period-btn');
+    if (!btn) return;
+
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('period-btn--active'));
+    btn.classList.add('period-btn--active');
+
+    currentPeriod = btn.dataset.period;
+    applyFilters();
+  });
 }
 
 // カテゴリタブのクリックを処理する
@@ -168,6 +200,7 @@ async function init() {
   buildCategoryTabs();
   bindEvents();
   bindCategoryEvents();
+  bindPeriodEvents();
 
   const list = document.getElementById('article-list');
   list.innerHTML = '<div class="loading">ニュースを読み込み中...</div>';
