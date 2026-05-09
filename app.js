@@ -3,11 +3,30 @@ let allArticles = [];
 
 // 現在の絞り込み状態
 let currentCategory = 'all';
-let currentPeriod = 'all';
+let currentPeriod = '3month';
 
 // --- お気に入り（localStorage） ---
 
 const FAVORITES_KEY = 'news_favorites';
+
+// --- キャッシュ（localStorage） ---
+
+const CACHE_KEY = 'news_cache';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
+
+function loadCache() {
+  const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+  if (!cached) return null;
+  if (Date.now() - cached.fetchedAt > CACHE_TTL) return null;
+  return cached.articles.map(a => ({ ...a, pubDate: new Date(a.pubDate) }));
+}
+
+function saveCache(articles) {
+  localStorage.setItem(CACHE_KEY, JSON.stringify({
+    fetchedAt: Date.now(),
+    articles: articles.map(a => ({ ...a, pubDate: a.pubDate.toISOString() })),
+  }));
+}
 
 function loadFavorites() {
   return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
@@ -106,18 +125,17 @@ function buildCategoryTabs() {
 
 // 期間フィルターの判定
 function isInPeriod(article) {
-  if (currentPeriod === 'all') return true;
   const now = new Date();
   const pub = article.pubDate;
+  const msPerDay = 1000 * 60 * 60 * 24;
   if (currentPeriod === 'today') {
     return pub.getFullYear() === now.getFullYear()
       && pub.getMonth() === now.getMonth()
       && pub.getDate() === now.getDate();
   }
-  if (currentPeriod === 'week') {
-    const msPerDay = 1000 * 60 * 60 * 24;
-    return (now - pub) <= msPerDay * 7;
-  }
+  if (currentPeriod === 'week')   return (now - pub) <= msPerDay * 7;
+  if (currentPeriod === '1month') return (now - pub) <= msPerDay * 30;
+  if (currentPeriod === '3month') return (now - pub) <= msPerDay * 90;
   return true;
 }
 
@@ -304,6 +322,13 @@ async function init() {
   bindCategoryEvents();
   bindPeriodEvents();
 
+  const cached = loadCache();
+  if (cached) {
+    allArticles = cached;
+    applyFilters();
+    return;
+  }
+
   const list = document.getElementById('article-list');
   list.innerHTML = '<div class="loading">ニュースを読み込み中...</div>';
 
@@ -316,6 +341,7 @@ async function init() {
     .flatMap(r => r.value)
     .sort((a, b) => b.pubDate - a.pubDate);
 
+  saveCache(allArticles);
   applyFilters();
 }
 
